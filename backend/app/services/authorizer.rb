@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Authorizer
   class << self
     def generate_token(owner)

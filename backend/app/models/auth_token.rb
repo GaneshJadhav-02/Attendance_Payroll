@@ -1,12 +1,7 @@
-# Copyright © 2025 OwnersTable Inc. All rights reserved.
-# This source code is proprietary and confidential.
-# Unauthorized copying or distribution is strictly prohibited.
-
 # frozen_string_literal: true
 
 ##
 # This model makes handling tokens easily by inherit from it.
-# There are 2 models using it {Admin::Token Admin::Token} and {Applicant::Token Applicant::Token}
 class AuthToken < ApplicationRecord
   self.abstract_class = true
 
