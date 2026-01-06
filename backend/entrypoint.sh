@@ -1,16 +1,24 @@
-#!/bin/sh
+#!/bin/bash
 set -e
-echo "ENVIRONMENT: $RAILS_ENV"
 
-echo "Installing missing gems"
-bundle check || bundle install --jobs 20 --retry 5
+echo "ENVIRONMENT: ${RAILS_ENV:-development}"
 
-echo "Load schema"
-bundle exec rails db:schema:load
+echo "Waiting for PostgreSQL..."
 
-echo "Removing pre-existing puma server.pid"
+until pg_isready -h "$DATABASE_HOST" -U "$DATABASE_USER" > /dev/null 2>&1; do
+  sleep 1
+done
+
+echo "PostgreSQL is ready!!!!"
+
+echo "Installing missing gems (if any)"
+bundle check || bundle install --jobs 4 --retry 3
+
+echo "Preparing database"
+bundle exec rails db:prepare
+
+echo "Removing old Puma PID"
 rm -f $APP_PATH/tmp/pids/server.pid
 
-# run passed commands
-# bundle exec sidekiq -C config/sidekiq.yml &
-bundle exec "$@"
+echo "Starting application"
+exec "$@"

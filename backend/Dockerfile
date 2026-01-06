@@ -1,81 +1,50 @@
 FROM ruby:3.3.3
 
-ENV APP_PATH /var/app
-ENV BUNDLE_VERSION 2.5.19
-ENV BUNDLE_PATH /usr/local/bundle/gems
-ENV TMP_PATH /tmp/
-ENV RAILS_LOG_TO_STDOUT true
-ENV RAILS_PORT 3000
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Environment variables
+ENV APP_PATH=/var/app \
+    BUNDLE_VERSION=2.5.19 \
+    BUNDLE_PATH=/usr/local/bundle \
+    RAILS_LOG_TO_STDOUT=true \
+    RAILS_PORT=3000
 
-# Update package list and install dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  bash \
   build-essential \
   git \
-  libgit2-dev \
-  cmake \
   postgresql-client \
   libpq-dev \
-  libxml2-dev \
-  libxslt-dev \
   nodejs \
+  npm \
   yarn \
-  imagemagick \
   tzdata \
   less \
-  npm \
-  libstdc++6 \
-  libx11-xcb1 \
-  libxcomposite1 \
-  libxdamage1 \
-  libxrandr2 \
-  libxcb1 \
-  libxshmfence1 \
-  libnss3 \
-  libatk1.0-0 \
-  libatk-bridge2.0-0 \
-  libcups2 \
-  libgbm1 \
-  libxfixes3 \
-  libxcursor1 \
-  libpango-1.0-0 \
-  libpangocairo-1.0-0 \
-  libasound2 \
-  libxrender1 \
-  libwayland-client0 \
-  libwayland-server0 \
-  libxkbcommon0 \
-  fonts-liberation \
-  libfreetype6 \
-  libharfbuzz-icu0 \
-  libfontconfig1 \
+  imagemagick \
+  libvips-dev \
   ca-certificates \
   curl \
-  unzip \
-  libvips-dev \
   && rm -rf /var/lib/apt/lists/*
 
+# Install bundler
+RUN gem install bundler -v "$BUNDLE_VERSION"
 
-# Copy entrypoint scripts and grant execution permissions
-COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Remove any Alpine-based gems and install Bundler cleanly
-RUN rm -rf /usr/local/bundle /usr/lib/ruby/gems/* /usr/local/lib/ruby/gems/* && \
-  gem install bundler --version "$BUNDLE_VERSION"
-
-# Navigate to app directory
+# Set working directory
 WORKDIR $APP_PATH
 
-# Copy and install dependencies
-COPY Gemfile ./
-COPY Gemfile.lock ./
+# Copy Gemfiles first (Docker cache optimization)
+COPY Gemfile Gemfile.lock ./
+
+# Install gems
 RUN bundle update net-pop
 RUN bundle install --force
-
+# Copy application code
 COPY . ./
+
+# Copy entrypoint
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE $RAILS_PORT
 
-ENTRYPOINT [ "bundle", "exec" ]
+# Proper entrypoint + command
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
