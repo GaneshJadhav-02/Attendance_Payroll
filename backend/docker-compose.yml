@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  backend:
+    build: .
+    container_name: payroll_backend
+    ports:
+      - "3000:3000"
+    environment:
+      RAILS_ENV: development
+      DATABASE_HOST: db
+      DATABASE_NAME: payroll_development
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: payroll_db
+    environment:
+      POSTGRES_DB: payroll_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
