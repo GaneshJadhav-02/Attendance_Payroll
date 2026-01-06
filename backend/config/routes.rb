@@ -3,6 +3,14 @@
 require 'sidekiq/web'
 
 Rails.application.routes.draw do
-  mount Sidekiq::Web => '/sidekiq'
   devise_for :admins, only: []
+  namespace :api, defaults: { format: :json } do
+    namespace :v1 do
+      namespace :admin do
+        post 'auth/sign_in', to: 'auth#sign_in'
+        get 'me', to: 'admins#me'
+        delete 'auth/sign_out', to: 'auth#sign_out'
+      end
+    end
+  end
 end

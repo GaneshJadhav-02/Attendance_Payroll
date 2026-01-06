@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Admin::Token < AuthToken
   self.table_name = 'admin_tokens'
   belongs_to :admin
