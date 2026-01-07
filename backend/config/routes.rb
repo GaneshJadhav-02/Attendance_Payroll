@@ -13,6 +13,7 @@ Rails.application.routes.draw do
         resources :companies, only: [:index]
         resources :employees, only: %i[index create destroy] do
           post 'advance_payment', on: :collection
+          post 'mark_present', on: :collection
         end
       end
     end
