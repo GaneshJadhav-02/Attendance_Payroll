@@ -41,6 +41,8 @@ COPY . ./
 
 # Copy entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# Fix for windows line endings
+# RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE $RAILS_PORT
