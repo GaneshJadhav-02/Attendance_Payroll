@@ -34,6 +34,11 @@ module Api
           result = ::V1::AdvancePayments::Create.run(params)
           respond_with result
         end
+
+        def mark_present
+          result = ::V1::Attendance::MarkPresent.run(params.permit!)
+          respond_with result.result, each_serializer: AttendanceSerializer
+        end
       end
     end
   end
