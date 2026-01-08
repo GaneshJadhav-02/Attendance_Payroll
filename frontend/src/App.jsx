@@ -31,15 +31,6 @@ const App = () => {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
 
-            {/* Protected Routes */}
-            {/* <Route
-            path="/dashboard"
-            element={
-              <AuthGuard>
-                <Dashboard />
-              </AuthGuard>
-            }
-          /> */}
             <Route
               path="/companies"
               element={
@@ -64,14 +55,6 @@ const App = () => {
                 </AuthGuard>
               }
             />
-            {/* <Route
-            path="/reports"
-            element={
-              <AuthGuard>
-                <Reports />
-              </AuthGuard>
-            }
-          /> */}
 
             {/* Redirect root to dashboard or login */}
             <Route path="/" element={<Navigate to="/companies" replace />} />

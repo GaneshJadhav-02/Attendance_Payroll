@@ -1,136 +1,93 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
-  Search,
   Users,
   Phone,
-  Mail,
   Briefcase,
   Building2,
   X,
   ChevronDown,
+  Loader2,
+  IndianRupee,
+  Trash2,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
-
-// Demo data
-const demoCompanies = [
-  {
-    id: 1,
-    name: "TechCorp Inc.",
-    address: "123 Silicon Valley, CA",
-    phone: "+1 555-0101",
-    email: "contact@techcorp.com",
-    employeeCount: 156,
-  },
-  {
-    id: 2,
-    name: "StartUp Labs",
-    address: "456 Innovation Drive, NY",
-    phone: "+1 555-0102",
-    email: "hello@startuplabs.io",
-    employeeCount: 42,
-  },
-  {
-    id: 3,
-    name: "Global Solutions",
-    address: "789 Enterprise Blvd, TX",
-    phone: "+1 555-0103",
-    email: "info@globalsolutions.com",
-    employeeCount: 328,
-  },
-];
-
-const demoEmployees = [
-  {
-    id: 1,
-    companyId: 1,
-    name: "John Smith",
-    perDaySalary: 500,
-    phoneNumber: "+1 555-1001",
-    position: "Software Engineer",
-    department: "Engineering",
-  },
-  {
-    id: 2,
-    companyId: 1,
-    name: "Sarah Johnson",
-    perDaySalary: 600,
-    phoneNumber: "+1 555-1002",
-    position: "Product Manager",
-    department: "Product",
-  },
-  {
-    id: 3,
-    companyId: 1,
-    name: "Mike Brown",
-    perDaySalary: 450,
-    phoneNumber: "+1 555-1003",
-    position: "Designer",
-    department: "Design",
-  },
-  {
-    id: 4,
-    companyId: 2,
-    name: "Emily Davis",
-    perDaySalary: 800,
-    phoneNumber: "+1 555-2001",
-    position: "CEO",
-    department: "Executive",
-  },
-  {
-    id: 5,
-    companyId: 2,
-    name: "Alex Wilson",
-    perDaySalary: 480,
-    phoneNumber: "+1 555-2002",
-    position: "Developer",
-    department: "Engineering",
-  },
-  {
-    id: 6,
-    companyId: 3,
-    name: "Lisa Anderson",
-    perDaySalary: 550,
-    phoneNumber: "+1 555-3001",
-    position: "HR Manager",
-    department: "Human Resources",
-  },
-];
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  createEmployee,
+  deleteEmployee,
+  fetchEmployeesByCompany,
+} from "../store/slices/employeesSlice";
+import { fetchCompanies } from "../store/slices/companiesSlice";
+import { showToast } from "../store/slices/toastSlice";
 
 const Employees = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
+  const { companies } = useAppSelector((state) => state.companies);
+  const {
+    employees,
+    isLoading: employeeLoading,
+    error,
+    isCreating,
+  } = useAppSelector((state) => state.employees);
+  const dispatch = useAppDispatch();
+
+  const [selectedCompanyId, setSelectedCompanyId] = useState(
+    companies[0]?.id || null
+  );
+
   const [showAddModal, setShowAddModal] = useState(false);
-  const [localEmployees, setLocalEmployees] = useState(demoEmployees);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
 
-  const filteredEmployees = localEmployees.filter((employee) => {
-    const matchesSearch =
-      employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.department.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCompany = selectedCompanyId
-      ? employee.companyId === selectedCompanyId
-      : true;
-    return matchesSearch && matchesCompany;
-  });
+  const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
 
-  const selectedCompany = demoCompanies.find((c) => c.id === selectedCompanyId);
+  useEffect(() => {
+    if (companies.length === 0) {
+      dispatch(fetchCompanies());
+    }
+  }, [companies.length, dispatch]);
 
-  const handleAddEmployee = (employee) => {
+  useEffect(() => {
+    if (companies.length > 0 && employees.length === 0 && !selectedCompanyId) {
+      dispatch(fetchEmployeesByCompany(companies[0].id));
+    }
+  }, [companies, employees.length, dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchEmployeesByCompany(selectedCompanyId));
+  }, [selectedCompanyId]);
+
+  const handleAddEmployee = async (employee) => {
     const newEmployee = {
-      ...employee,
-      id: Date.now(),
+      company_id: employee.companyId,
+      name: employee.name,
+      per_day_salary: employee.perDaySalary,
+      position: employee.position,
+      department: employee.department,
+      phone_no: employee.phone,
     };
-    setLocalEmployees([...localEmployees, newEmployee]);
-    setShowAddModal(false);
 
-    // In production, call API:
     // dispatch(createEmployee({ companyId: employee.companyId, data: employee }));
+    const response = await dispatch(createEmployee({ data: newEmployee }));
+    if (response.meta.requestStatus === "fulfilled") {
+      setShowAddModal(false);
+      dispatch(
+        showToast({
+          description: "Employee added successfully!",
+          variant: "success",
+        })
+      );
+      setSelectedCompanyId(Number(employee.companyId));
+    }
   };
 
-  const getCompanyName = (companyId) => {
-    return demoCompanies.find((c) => c.id === companyId)?.name || "Unknown";
+  const handleDeleteEmployee = async (employeeId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this employee?"
+    );
+
+    if (!confirmed) return;
+
+    await dispatch(deleteEmployee(employeeId));
   };
 
   return (
@@ -157,17 +114,6 @@ const Employees = () => {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search employees..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-styled pl-11"
-            />
-          </div>
-
           {/* Company Filter Dropdown */}
           <div className="relative">
             <button
@@ -187,16 +133,7 @@ const Employees = () => {
 
             {showCompanyDropdown && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-10 overflow-hidden">
-                <button
-                  onClick={() => {
-                    setSelectedCompanyId(null);
-                    setShowCompanyDropdown(false);
-                  }}
-                  className="w-full px-4 py-3 text-left hover:bg-muted transition-colors"
-                >
-                  All Companies
-                </button>
-                {demoCompanies.map((company) => (
+                {companies.map((company) => (
                   <button
                     key={company.id}
                     onClick={() => {
@@ -243,66 +180,91 @@ const Employees = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee, index) => (
-                  <tr
-                    key={employee.id}
-                    className="border-t border-border hover:bg-muted/30 transition-colors animate-fade-in"
-                    style={{ animationDelay: `${index * 30}ms` }}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary">
-                            {employee.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {employee.name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {employee.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">
-                          {getCompanyName(employee.companyId)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">
-                          {employee.position}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                        {employee.department}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="w-4 h-4" />
-                        <span>{employee.phone}</span>
-                      </div>
+                {employeeLoading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-4 text-center">
+                      <Loader2 className="w-6 h-6 mx-auto animate-spin text-muted-foreground" />
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  employees.map((employee, index) => (
+                    <tr
+                      key={employee.id}
+                      className="border-t border-border hover:bg-muted/30 transition-colors animate-fade-in"
+                      style={{ animationDelay: `${index * 30}ms` }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-sm font-medium text-primary">
+                              {employee.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {employee.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {employee.position}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {employee?.company_name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {employee?.position || "N/A"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                          {employee?.department || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <IndianRupee className="w-4 h-4" />
+                          <span>{employee.per_day_salary ?? 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="w-4 h-4" />
+                          <span>{employee?.phone_no || "N/A"}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <button
+                            onClick={() => handleDeleteEmployee(employee.id)}
+                            className="inline-flex items-center gap-1 p-2 rounded-lg text-sm
+                        text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
-          {filteredEmployees.length === 0 && (
+          {employees.length === 0 && (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">
@@ -318,9 +280,11 @@ const Employees = () => {
         {/* Add Employee Modal */}
         {showAddModal && (
           <AddEmployeeModal
-            companies={demoCompanies}
+            companies={companies}
             onClose={() => setShowAddModal(false)}
             onSubmit={handleAddEmployee}
+            error={error}
+            isCreating={isCreating}
           />
         )}
       </div>
@@ -328,7 +292,13 @@ const Employees = () => {
   );
 };
 
-const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
+const AddEmployeeModal = ({
+  companies,
+  onClose,
+  onSubmit,
+  error,
+  isCreating,
+}) => {
   const [formData, setFormData] = useState({
     companyId: companies[0]?.id || 0,
     name: "",
@@ -336,6 +306,7 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
     phone: "",
     position: "",
     department: "",
+    perDaySalary: "",
   });
 
   const handleSubmit = (e) => {
@@ -370,7 +341,9 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
                 setFormData({ ...formData, companyId: Number(e.target.value) })
               }
               required
-              className="input-styled"
+              className={`input-styled${
+                error?.company_id ? "border-red-500 focus:ring-red-500" : ""
+              }`}
             >
               {companies.map((company) => (
                 <option key={company.id} value={company.id}>
@@ -378,6 +351,11 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
                 </option>
               ))}
             </select>
+            {error?.company_id && (
+              <p className="mt-1 text-sm text-red-600">
+                {error?.company_id[0]}
+              </p>
+            )}
           </div>
 
           <div>
@@ -392,24 +370,13 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
               }
               placeholder="Enter full name"
               required
-              className="input-styled"
+              className={`input-styled${
+                error?.name ? "border-red-500 focus:ring-red-500" : ""
+              }`}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              placeholder="employee@company.com"
-              required
-              className="input-styled"
-            />
+            {error?.name && (
+              <p className="mt-1 text-sm text-red-600">{error?.name[0]}</p>
+            )}
           </div>
 
           <div>
@@ -419,13 +386,20 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) =>
-                setFormData({ ...formData, phone: e.target.value })
-              }
-              placeholder="+1 555-0100"
-              required
-              className="input-styled"
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                setFormData({ ...formData, phone: value });
+              }}
+              placeholder="+1 555 0100"
+              className={`input-styled${
+                error?.phone_no ? "border-red-500 focus:ring-red-500" : ""
+              }`}
+              inputMode="numeric"
+              autoComplete="tel"
             />
+            {error?.phone_no && (
+              <p className="mt-1 text-sm text-red-600">{error?.phone_no[0]}</p>
+            )}
           </div>
 
           <div>
@@ -439,7 +413,6 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
                 setFormData({ ...formData, position: e.target.value })
               }
               placeholder="e.g., Software Engineer"
-              required
               className="input-styled"
             />
           </div>
@@ -455,9 +428,34 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
                 setFormData({ ...formData, department: e.target.value })
               }
               placeholder="e.g., Engineering"
-              required
               className="input-styled"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Per Day Salary
+            </label>
+            <input
+              type="number"
+              value={formData.perDaySalary}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  perDaySalary: Number(e.target.value),
+                })
+              }
+              placeholder="40000"
+              required
+              className={`input-styled${
+                error?.per_day_salary ? "border-red-500 focus:ring-red-500" : ""
+              }`}
+            />
+            {error?.per_day_salary && (
+              <p className="mt-1 text-sm text-red-600">
+                {error?.per_day_salary[0]}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -468,8 +466,16 @@ const AddEmployeeModal = ({ companies, onClose, onSubmit }) => {
             >
               Cancel
             </button>
-            <button type="submit" className="flex-1 btn-gradient py-3">
-              Add Employee
+            <button
+              type="submit"
+              className="flex-1 btn-gradient py-3 justify-center flex items-center gap-2 font-medium"
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Add Employee"
+              )}
             </button>
           </div>
         </form>

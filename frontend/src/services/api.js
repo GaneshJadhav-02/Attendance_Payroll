@@ -1,4 +1,4 @@
-const API_BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1";
 
 const getAuthToken = () => {
@@ -8,25 +8,35 @@ const getAuthToken = () => {
 // Helper to handle API responses
 const handleResponse = async (response) => {
   if (response.status === 401) {
-    // localStorage.removeItem("auth_token");
-    // localStorage.removeItem("user");
-    // window.location.href = "/login";
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
 
-    throw {
-      status: 401,
-      message: "Unauthorized",
-    };
+    throw { status: 401, message: "Unauthorized" };
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
+    const text = await response.text();
+    let errorBody = null;
+
+    try {
+      errorBody = text ? JSON.parse(text) : null;
+    } catch {
+      errorBody = null;
+    }
 
     throw {
       status: response.status,
-      ...errorBody,
+      ...(errorBody || { message: response.statusText }),
     };
   }
-  return response.json();
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 };
 
 // API request helper with auth token
@@ -58,12 +68,10 @@ export const authAPI = {
     return handleResponse(response);
   },
 
-  // POST /api/v1/auth/logout
   logout: async () => {
     return apiRequest("/admin/auth/sign_out", { method: "DELETE" });
   },
 
-  // GET /api/v1/auth/me - Verify token and get current user
   getCurrentUser: async () => {
     return apiRequest("/auth/me");
   },
@@ -71,36 +79,19 @@ export const authAPI = {
 
 // Companies API Calls
 export const companiesAPI = {
-  // GET /api/v1/companies
   getAll: async () => {
     return apiRequest("/admin/companies");
   },
 
-  // GET /api/v1/companies/:id
   getById: async (id) => {
     return apiRequest(`/companies/${id}`);
   },
 
-  // POST /api/v1/companies
-  // Body: { name: string, address: string, phone: string, email: string }
   create: async (data) => {
     return apiRequest("/companies", {
       method: "POST",
       body: JSON.stringify({ company: data }),
     });
-  },
-
-  // PUT /api/v1/companies/:id
-  update: async (id, data) => {
-    return apiRequest(`/companies/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ company: data }),
-    });
-  },
-
-  // DELETE /api/v1/companies/:id
-  delete: async (id) => {
-    return apiRequest(`/companies/${id}`, { method: "DELETE" });
   },
 };
 
@@ -147,35 +138,29 @@ export const attendanceAPI = {
 
 // Employees API Calls
 export const employeesAPI = {
-  // GET /api/v1/companies/:company_id/employees
   getByCompany: async (companyId) => {
-    return apiRequest(`/companies/${companyId}/employees`);
+    return apiRequest(`/admin/employees?company_id=${parseInt(companyId)}`);
   },
 
-  // GET /api/v1/employees/:id
-  getById: async (id) => {
-    return apiRequest(`/employees/${id}`);
+  getAllEmployees: async () => {
+    return apiRequest("/admin/employees");
   },
 
-  // POST /api/v1/companies/:company_id/employees
-  // Body: { name: string, email: string, phone: string, position: string, department: string }
-  create: async (companyId, data) => {
-    return apiRequest(`/companies/${companyId}/employees`, {
+  create: async (data) => {
+    return apiRequest("/admin/employees", {
       method: "POST",
-      body: JSON.stringify({ employee: data }),
+      body: JSON.stringify({ ...data }),
     });
   },
 
-  // PUT /api/v1/employees/:id
-  update: async (id, data) => {
-    return apiRequest(`/employees/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ employee: data }),
-    });
-  },
-
-  // DELETE /api/v1/employees/:id
   delete: async (id) => {
-    return apiRequest(`/employees/${id}`, { method: "DELETE" });
+    return apiRequest(`/admin/employees/${id}`, { method: "DELETE" });
+  },
+
+  markAttendance: async (data) => {
+    return apiRequest("/admin/employees/mark_present", {
+      method: "POST",
+      body: JSON.stringify({ ...data }),
+    });
   },
 };

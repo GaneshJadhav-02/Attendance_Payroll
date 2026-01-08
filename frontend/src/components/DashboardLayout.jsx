@@ -20,12 +20,6 @@ const navItems = [
   { path: "/companies", label: "Companies", icon: Building2 },
   { path: "/employees", label: "Employees", icon: Users },
   { path: "/attendance", label: "Attendance", icon: CalendarCheck },
-  {
-    path: "/salary-records",
-    label: "Employee Salary Records",
-    icon: Wallet,
-  },
-  //   { path: "/reports", label: "Reports", icon: FileBarChart },
 ];
 
 const DashboardLayout = ({ children }) => {

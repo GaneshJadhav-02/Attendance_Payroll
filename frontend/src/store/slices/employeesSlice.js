@@ -6,6 +6,7 @@ const initialState = {
   selectedEmployee: null,
   isLoading: false,
   error: null,
+  isCreating: false,
 };
 
 // Async thunks
@@ -14,21 +15,33 @@ export const fetchEmployeesByCompany = createAsyncThunk(
   async (companyId, { rejectWithValue }) => {
     try {
       const response = await employeesAPI.getByCompany(companyId);
-      return response.employees || response;
+      return response.data || response;
     } catch (error) {
       return rejectWithValue(error.message);
     }
   }
 );
 
+export const fetchAllEmployees = createAsyncThunk(
+  "employees/fetchAll",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await employeesAPI.getAllEmployees();
+      return response.data || response;
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
 export const createEmployee = createAsyncThunk(
   "employees/create",
-  async ({ companyId, data }, { rejectWithValue }) => {
+  async ({ data }, { rejectWithValue }) => {
     try {
-      const response = await employeesAPI.create(companyId, data);
-      return response.employee || response;
+      const response = await employeesAPI.create(data);
+      return response.data || response;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error);
     }
   }
 );
@@ -52,7 +65,19 @@ export const deleteEmployee = createAsyncThunk(
       await employeesAPI.delete(id);
       return id;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error);
+    }
+  }
+);
+
+export const markAttendance = createAsyncThunk(
+  "employees/markAttendance",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await employeesAPI.markAttendance(data);
+      return response.data || response;
+    } catch (error) {
+      return rejectWithValue(error);
     }
   }
 );
@@ -70,6 +95,13 @@ const employeesSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setAttendanceStatus: (state, action) => {
+      const { employeeId, status } = action.payload;
+      const employee = state.employees.find((e) => e.id === employeeId);
+      if (employee) {
+        employee.attendance_status = status;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -86,16 +118,29 @@ const employeesSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      // Fetch all employees
+      .addCase(fetchAllEmployees.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllEmployees.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.employees = action.payload;
+      })
+      .addCase(fetchAllEmployees.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
       // Create
       .addCase(createEmployee.pending, (state) => {
-        state.isLoading = true;
+        state.isCreating = true;
       })
       .addCase(createEmployee.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.isCreating = false;
         state.employees.push(action.payload);
       })
       .addCase(createEmployee.rejected, (state, action) => {
-        state.isLoading = false;
+        state.isCreating = false;
         state.error = action.payload;
       })
       // Update
@@ -116,6 +161,10 @@ const employeesSlice = createSlice({
   },
 });
 
-export const { setSelectedEmployee, clearEmployees, clearError } =
-  employeesSlice.actions;
+export const {
+  setSelectedEmployee,
+  clearEmployees,
+  clearError,
+  setAttendanceStatus,
+} = employeesSlice.actions;
 export default employeesSlice.reducer;
