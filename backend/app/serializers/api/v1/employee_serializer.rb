@@ -10,8 +10,18 @@ module Api
                  :position,
                  :department,
                  :phone_no,
+                 :attendance_status,
+                 :company_name,
                  :created_at,
                  :updated_at
+
+      def attendance_status
+        object.attendance_status
+      end
+
+      def company_name
+        object.company.name
+      end
     end
   end
 end

@@ -6,4 +6,10 @@ class Employee < ApplicationRecord
   has_many :advance_payments
 
   validates :name, :per_day_salary, presence: true
+
+
+  def attendance_status
+    today_attendance = attendances.find_by(date: Date.current)
+    today_attendance&.present? ? 'present' : 'not_marked'
+  end
 end
