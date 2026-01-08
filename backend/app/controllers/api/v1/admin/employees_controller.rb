@@ -8,7 +8,7 @@ module Api
         param :company_id, Integer, 'Company ID', required: true
 
         def index
-          company = Company.find(params[:company_id])
+          company = Company.find(params[:company_id]&.to_i)
           respond_with company.employees, each_serializer: EmployeeSerializer
         end
 

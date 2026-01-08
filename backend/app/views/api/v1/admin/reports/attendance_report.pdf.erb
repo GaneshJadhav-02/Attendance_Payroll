@@ -1,0 +1,27 @@
+<h2>Attendance Report</h2>
+
+<p><strong>Employee:</strong> <%= @data[:employee_name] %></p>
+<p><strong>Company:</strong> <%= @data[:company_name] %></p>
+<p><strong>Date Range:</strong> <%= @data[:from_date] %> to <%= @data[:to_date] %></p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+  <tr>
+    <th>Date</th>
+    <th>Status</th>
+  </tr>
+
+  <% @data[:daily_status].each do |row| %>
+    <tr>
+      <td><%= row[:date] %></td>
+      <td><%= row[:status] %></td>
+    </tr>
+  <% end %>
+</table>
+
+<br/>
+
+<p><strong>Total Working Days:</strong> <%= @data[:summary][:total_days] %></p>
+<p><strong>Days Present:</strong> <%= @data[:summary][:days_present] %></p>
+<p><strong>Total Salary Earned:</strong> <%= @data[:summary][:salary_earned] %></p>
+<p><strong>Advance Paid:</strong> <%= @data[:summary][:advance_paid] %></p>
+<p><strong>Final Payable:</strong> <%= @data[:summary][:final_payable] %></p>

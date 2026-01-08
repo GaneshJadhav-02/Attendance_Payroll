@@ -61,6 +61,12 @@ gem 'paper_trail'
 gem 'rubyXL', '~> 3.3', '>= 3.3.21'
 gem 'sidekiq'
 gem 'typhoeus'
+gem 'axlsx', '~> 2.0', '>= 2.0.1'
+gem "prawn"
+gem "prawn-table"
+
+
+
 
 group :development, :test do
   gem 'debug', platforms: %i[mri windows]

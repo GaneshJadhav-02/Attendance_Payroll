@@ -15,6 +15,9 @@ Rails.application.routes.draw do
           post 'advance_payment', on: :collection
           post 'mark_present', on: :collection
         end
+        resources :reports, only: [] do
+          get 'employee_attendance', on: :collection
+        end
       end
     end
   end
