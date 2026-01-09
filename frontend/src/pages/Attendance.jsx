@@ -6,19 +6,23 @@ import {
   Check,
   X,
   FileBarChart,
-  Calendar,
   Loader2,
+  HandCoins,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout.jsx";
 import { useAppDispatch, useAppSelector } from "../store/hooks.js";
 import { fetchCompanies } from "../store/slices/companiesSlice.js";
 import {
+  advanceEmployeePayment,
   fetchEmployeesByCompany,
   markAttendance,
   setAttendanceStatus,
 } from "../store/slices/employeesSlice.js";
 import { API_BASE_URL } from "../services/api.js";
 import moment from "moment";
+import AttendanceReportModal from "../components/AttendanceReportModal.jsx";
+import AdvancePaymentModal from "../components/AdvancePaymentModal.jsx";
+import { showToast } from "../store/slices/toastSlice.js";
 
 const attendanceStatuses = [
   {
@@ -38,21 +42,26 @@ const attendanceStatuses = [
 ];
 
 const Attendance = () => {
-  const { companies } = useAppSelector((state) => state.companies);
-  const { employees, isLoading: employeeLoading } = useAppSelector(
-    (state) => state.employees
-  );
   const dispatch = useAppDispatch();
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState(
-    companies[0]?.id || null
-  );
+  const { companies, isLoading } = useAppSelector((state) => state.companies);
+  const {
+    employees,
+    isLoading: employeeLoading,
+    isPaying,
+  } = useAppSelector((state) => state.employees);
+  const { token } = useAppSelector((state) => state.auth);
+
+  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [reportEmployee, setReportEmployee] = useState(null);
-
-  const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
+  const [advanceEmployee, setAdvanceEmployee] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
 
   const todayDate = moment().format("YYYY-MM-DD");
+
+  const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
 
   useEffect(() => {
     if (companies.length === 0) {
@@ -61,25 +70,35 @@ const Attendance = () => {
   }, [companies.length, dispatch]);
 
   useEffect(() => {
-    if (companies.length > 0 && employees.length === 0 && !selectedCompanyId) {
-      dispatch(fetchEmployeesByCompany(companies[0].id));
+    if (companies.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(companies[0].id);
     }
-  }, [companies, employees.length, dispatch]);
+  }, [companies, selectedCompanyId]);
 
   useEffect(() => {
-    dispatch(fetchEmployeesByCompany(selectedCompanyId));
-  }, [selectedCompanyId]);
+    if (selectedCompanyId) {
+      dispatch(fetchEmployeesByCompany(selectedCompanyId));
+    }
+  }, [selectedCompanyId, dispatch]);
 
   const handleMarkAttendance = async (employeeId, status) => {
+    const employee = employees.find((e) => e.id === employeeId);
+    const employeeName = employee?.name || "Employee";
+
     if (status === "absent") {
-      // 1️⃣ Update Redux
       dispatch(
         setAttendanceStatus({
           employeeId,
           status: "absent",
         })
       );
-
+      dispatch(
+        showToast({
+          title: "Attendance Marked Successful",
+          description: `Attendance for ${employeeName} has been marked successfully.`,
+          variant: "success",
+        })
+      );
       localStorage.setItem(`attendance_${todayDate}_${employeeId}`, "absent");
       return;
     }
@@ -99,28 +118,119 @@ const Attendance = () => {
             status: "present",
           })
         );
+        dispatch(
+          showToast({
+            title: "Attendance Marked Successful",
+            description: `Attendance for ${employeeName} has been marked successfully.`,
+            variant: "success",
+          })
+        );
       } catch (error) {
         console.error("Failed to mark present", error);
       }
     }
   };
 
-  const downloadPDF = async (data) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/admin/reports/employee_attendance.xlsx`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data }),
-        }
+  const handleAdvancePayment = async (data) => {
+    const response = await dispatch(advanceEmployeePayment(data));
+    if (response.meta.requestStatus === "fulfilled") {
+      const employeeName = advanceEmployee?.name || "Employee";
+      setAdvanceEmployee(null);
+      dispatch(
+        showToast({
+          title: "Advance Payment Successful",
+          description: `Advance payment for ${employeeName} has been recorded successfully.`,
+          variant: "success",
+        })
       );
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
     }
   };
 
-  const downloadCSV = async () => {};
+  const downloadPDF = async (data) => {
+    setPdfLoading(true);
+    const response = await fetch(
+      `${API_BASE_URL}/admin/reports/employee_attendance.pdf?employee_id=${reportEmployee.id}&from_date=${data.from_date}&to_date=${data.to_date}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/pdf",
+          Authorization: token,
+        },
+      }
+    );
+
+    setPdfLoading(false);
+
+    if (!response.ok) {
+      dispatch(
+        showToast({
+          title: "Error Downloading Report",
+          variant: "error",
+        })
+      );
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = `attendance_report_${reportEmployee.name}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    setReportEmployee(null);
+    dispatch(
+      showToast({
+        title: "Attendance Report Downloaded Successfully.",
+        variant: "success",
+      })
+    );
+  };
+
+  const downloadCSV = async (data) => {
+    setExcelLoading(true);
+    const response = await fetch(
+      `${API_BASE_URL}/admin/reports/employee_attendance.xlsx?employee_id=${reportEmployee.id}&from_date=${data.from_date}&to_date=${data.to_date}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          Authorization: token,
+        },
+      }
+    );
+    setExcelLoading(false);
+
+    if (!response.ok) {
+      dispatch(
+        showToast({
+          title: "Error Downloading Report",
+          variant: "error",
+        })
+      );
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = `attendance_report_${reportEmployee.name}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    setReportEmployee(null);
+    dispatch(
+      showToast({
+        title: "Attendance Report Downloaded Successfully.",
+        variant: "success",
+      })
+    );
+  };
 
   const getAttendanceStatus = (employee) => {
     if (employee.attendance_status === "present")
@@ -139,6 +249,16 @@ const Attendance = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="col-span-full flex items-center justify-center py-48">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="animate-fade-in">
@@ -153,7 +273,6 @@ const Attendance = () => {
             </div>
           </div>
         </div>
-
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           {/* Company Filter Dropdown */}
@@ -164,7 +283,7 @@ const Attendance = () => {
             >
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-muted-foreground" />
-                <span>{selectedCompany?.name || "All Companies"}</span>
+                <span>{selectedCompany?.name || "Select Company"}</span>
               </div>
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${
@@ -300,6 +419,13 @@ const Attendance = () => {
                             >
                               <FileBarChart className="w-5 h-5" />
                             </button>
+                            <button
+                              onClick={() => setAdvanceEmployee(employee)}
+                              className="p-2 rounded-lg hover:bg-muted text-muted-foreground"
+                              title="Pay Advance"
+                            >
+                              <HandCoins className="w-5 h-5" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -330,96 +456,21 @@ const Attendance = () => {
             onClose={() => setReportEmployee(null)}
             downloadCSV={downloadCSV}
             downloadPDF={downloadPDF}
+            pdfLoading={pdfLoading}
+            excelLoading={excelLoading}
+          />
+        )}
+
+        {advanceEmployee && (
+          <AdvancePaymentModal
+            onClose={() => setAdvanceEmployee(null)}
+            employee={advanceEmployee}
+            onSubmit={handleAdvancePayment}
+            isLoading={isPaying}
           />
         )}
       </div>
     </DashboardLayout>
-  );
-};
-
-const AttendanceReportModal = ({
-  employee,
-  onClose,
-  downloadPDF,
-  downloadCSV,
-}) => {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-foreground/50" onClick={onClose} />
-
-      <div className="relative bg-card rounded-2xl p-6 w-full max-w-md shadow-xl animate-slide-up">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">
-            Attendance Report – {employee.name}
-          </h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Start Date
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="input-styled pl-10"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              End Date
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="input-styled pl-10"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={() =>
-                downloadPDF({
-                  from_date: startDate,
-                  to_date: endDate,
-                })
-              }
-              className="flex-1 btn-gradient"
-            >
-              Download PDF
-            </button>
-            <button
-              onClick={() =>
-                downloadCSV({
-                  from_date: startDate,
-                  to_date: endDate,
-                })
-              }
-              className="flex-1 btn-gradient"
-            >
-              Download CSV
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 };
 

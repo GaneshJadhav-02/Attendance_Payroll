@@ -163,4 +163,11 @@ export const employeesAPI = {
       body: JSON.stringify({ ...data }),
     });
   },
+
+  advancePayment: async (data) => {
+    return apiRequest("/admin/employees/advance_payment", {
+      method: "POST",
+      body: JSON.stringify({ ...data }),
+    });
+  },
 };

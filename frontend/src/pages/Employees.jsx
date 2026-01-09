@@ -22,7 +22,7 @@ import { fetchCompanies } from "../store/slices/companiesSlice";
 import { showToast } from "../store/slices/toastSlice";
 
 const Employees = () => {
-  const { companies } = useAppSelector((state) => state.companies);
+  const { companies, isLoading } = useAppSelector((state) => state.companies);
   const {
     employees,
     isLoading: employeeLoading,
@@ -31,9 +31,7 @@ const Employees = () => {
   } = useAppSelector((state) => state.employees);
   const dispatch = useAppDispatch();
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState(
-    companies[0]?.id || null
-  );
+  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
@@ -55,6 +53,12 @@ const Employees = () => {
   useEffect(() => {
     dispatch(fetchEmployeesByCompany(selectedCompanyId));
   }, [selectedCompanyId]);
+
+  useEffect(() => {
+    if (companies.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(companies[0].id);
+    }
+  }, [companies, selectedCompanyId]);
 
   const handleAddEmployee = async (employee) => {
     const newEmployee = {
@@ -87,8 +91,27 @@ const Employees = () => {
 
     if (!confirmed) return;
 
-    await dispatch(deleteEmployee(employeeId));
+    const response = await dispatch(deleteEmployee(employeeId));
+
+    if (response.meta.requestStatus === "fulfilled") {
+      dispatch(
+        showToast({
+          description: "Employee deleted successfully!",
+          variant: "success",
+        })
+      );
+    }
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="col-span-full flex items-center justify-center py-48">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
