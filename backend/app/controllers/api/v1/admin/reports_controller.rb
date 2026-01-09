@@ -15,7 +15,7 @@ module Api
             format.xlsx do
               package = EmployeeAttendanceXlsx.generate(data)
               send_data package.to_stream.read,
-                        filename: "attendance_report.xlsx",
+                        filename: "Attendance Report #{data[:employee_name].parameterize}.xlsx",
                         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             end
 
@@ -23,7 +23,7 @@ module Api
               pdf = EmployeeAttendancePdf.generate(data)
 
               send_data pdf.render,
-                        filename: "attendance_report_#{data[:employee_name].parameterize}.pdf",
+                        filename: "Attendance Report #{data[:employee_name].parameterize}.pdf",
                         type: "application/pdf",
                         disposition: "inline"
             end
