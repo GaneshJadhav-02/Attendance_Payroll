@@ -1,15 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Plus,
-  Search,
-  Building2,
-  Users,
-  Phone,
-  Mail,
-  MoreVertical,
-  X,
-  Loader2,
-} from "lucide-react";
+import { Building2, Users, Phone, Mail, X, Loader2 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout.jsx";
 import { useAppDispatch, useAppSelector } from "../store/hooks.js";
 import { fetchCompanies } from "../store/slices/companiesSlice.js";
@@ -81,7 +71,7 @@ const Companies = () => {
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Phone className="w-4 h-4" />
-                  <span>{company?.phone}</span>
+                  <span>{company?.phone_number}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Mail className="w-4 h-4" />
@@ -93,7 +83,7 @@ const Companies = () => {
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-foreground">
-                    {company?.employeeCount} Employees
+                    {company?.employeeCount ?? 0} Employees
                   </span>
                 </div>
               </div>
@@ -107,9 +97,6 @@ const Companies = () => {
             <h3 className="text-lg font-medium text-foreground mb-2">
               No companies found
             </h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search or add a new company
-            </p>
           </div>
         )}
 
