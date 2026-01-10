@@ -7,6 +7,7 @@ const initialState = {
   isLoading: false,
   error: null,
   isCreating: false,
+  isPaying: false,
 };
 
 // Async thunks
@@ -75,6 +76,18 @@ export const markAttendance = createAsyncThunk(
   async (data, { rejectWithValue }) => {
     try {
       const response = await employeesAPI.markAttendance(data);
+      return response.data || response;
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
+export const advanceEmployeePayment = createAsyncThunk(
+  "employees/advancePayment",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await employeesAPI.advancePayment(data);
       return response.data || response;
     } catch (error) {
       return rejectWithValue(error);
@@ -157,6 +170,16 @@ const employeesSlice = createSlice({
         state.employees = state.employees.filter(
           (e) => e.id !== action.payload
         );
+      })
+      .addCase(advanceEmployeePayment.pending, (state) => {
+        state.isPaying = true;
+      })
+      .addCase(advanceEmployeePayment.fulfilled, (state) => {
+        state.isPaying = false;
+      })
+      .addCase(advanceEmployeePayment.rejected, (state, action) => {
+        state.isPaying = false;
+        state.error = action.payload;
       });
   },
 });

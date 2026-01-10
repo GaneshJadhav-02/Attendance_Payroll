@@ -83,7 +83,7 @@ const Companies = () => {
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-foreground">
-                    {company?.employeeCount ?? 0} Employees
+                    {company?.employee_count ?? 0} Employees
                   </span>
                 </div>
               </div>
