@@ -16,6 +16,7 @@ bundle check || bundle install --jobs 4 --retry 3
 
 echo "Preparing database"
 bundle exec rails db:prepare
+bundle exec rails db:seed
 
 echo "Removing old Puma PID"
 rm -f $APP_PATH/tmp/pids/server.pid
