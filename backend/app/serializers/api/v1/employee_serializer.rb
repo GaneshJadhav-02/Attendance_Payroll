@@ -22,6 +22,10 @@ module Api
       def company_name
         object.company.name
       end
+
+      def created_at
+        object.created_at.strftime('%Y-%m-%d')
+      end
     end
   end
 end
