@@ -2,8 +2,8 @@
 
 class Employee < ApplicationRecord
   belongs_to :company
-  has_many :attendances
-  has_many :advance_payments
+  has_many :attendances, dependent: :destroy
+  has_many :advance_payments, dependent: :destroy
 
   validates :name, :per_day_salary, presence: true
 

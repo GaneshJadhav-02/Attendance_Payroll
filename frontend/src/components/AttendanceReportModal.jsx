@@ -13,6 +13,7 @@ const AttendanceReportModal = ({
   const [endDate, setEndDate] = useState("");
 
   const isValid = startDate && endDate;
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -38,6 +39,7 @@ const AttendanceReportModal = ({
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                max={today}
                 className="input-styled pl-10"
                 required
               />
@@ -54,6 +56,7 @@ const AttendanceReportModal = ({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                max={today}
                 className="input-styled pl-10"
                 required
               />
